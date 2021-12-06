@@ -1,0 +1,180 @@
+version: "3.8"
+
+networks:
+  backend:
+    driver: ${NETWORKS_DRIVER}
+  proxy:
+    external: true
+
+volumes:
+  redis:
+    driver: ${VOLUMES_DRIVER}
+
+services:
+  # internal redis service for bullmq
+  redis:
+    container_name: redis
+    image: 'redis'
+    restart: always
+    hostname: redis
+    expose:
+      - 6379
+    ports:
+      - '6379:6379'
+    networks:
+      - backend
+    volumes:
+      - redis:/var/lib/redis/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    labels:
+      traefik.enable: false
+
+  traefik:
+    container_name: traefik
+    image: traefik:v2.5.3
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - proxy
+  
+  marketing:
+    container_name: marketing
+    image: "vorillaz/marketing-iot-example"
+    restart: always
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`localhost`)
+      - "traefik.http.routers.marketing.rule=Host(`localhost`)"
+      - "traefik.http.routers.marketing.entrypoints=web"
+      - traefik.http.services.marketing.loadbalancer.server.port=3000
+      - traefik.dashboard.priority=2
+
+  documentation:
+    container_name: documentation
+    image: "vorillaz/iot-docs"
+    restart: always
+    networks:
+      - proxy
+    environment:
+      - APP_PORT=3009
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.documentation.rule=HostRegexp(`{subdomain:docs}.localhost`)
+      - traefik.http.routers.documentation.priority=2
+      - traefik.http.services.documentation.loadbalancer.server.port=3009
+
+  collect_api:
+    container_name: collect_api
+    build: ./collect
+    restart: always
+    networks:
+      - proxy
+    environment:
+      - APP_PORT=3001
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.collect_api.rule=HostRegexp(`{subdomain:collect}.localhost`)
+      - traefik.http.routers.collect_api.priority=2
+      - traefik.http.services.collect_api.loadbalancer.server.port=3001
+
+  app:
+    container_name: app
+    build: ./dashboard
+    restart: always
+    networks:
+      - proxy
+    environment:
+      - APP_PORT=3005
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`localhost`)
+      - traefik.http.routers.app.rule=HostRegexp(`{subdomain:[a-z]+}.localhost`)
+      - traefik.http.routers.app.priority=1
+      - traefik.http.services.app.loadbalancer.server.port=3005
+
+  # Worker demo
+  worker:
+    container_name: worker
+    build: ./worker
+    restart: always
+    depends_on:
+      - redis
+    links:
+      - redis
+    networks:
+      - backend
+      - proxy
+    environment:
+      - DEBUG=${DEBUG}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - APP_PORT=3300
+      - MONITORING_SERVICES=${MONITORING_SERVICES}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.worker.rule=HostRegexp(`{subdomain:worker}.localhost`)
+      - traefik.http.routers.worker.priority=2
+      - traefik.http.services.worker.loadbalancer.server.port=3300
+  
+  # Monitoring demo
+  monitoring_1:
+    container_name: monitoring_1
+    build: ./monitoring
+    restart: always
+    depends_on:
+      - redis
+    links:
+      - redis
+    networks:
+      - backend
+      - proxy
+    environment:
+      - DEBUG=${DEBUG}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - APP_PORT=3012
+      - LOCATION=FRA
+      - MONITORING_SERVICES=${MONITORING_SERVICES}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.monitoring_1.rule=HostRegexp(`{subdomain:frankfurt}.localhost`)
+      - traefik.http.routers.monitoring_1.priority=2
+      - traefik.http.services.monitoring_1.loadbalancer.server.port=3012
+
+  # Monitoring demo another location
+  monitoring_2:
+    container_name: monitoring_2
+    build: ./monitoring
+    restart: always
+    depends_on:
+      - redis
+    links:
+      - redis
+    networks:
+      - backend
+      - proxy
+    environment:
+      - DEBUG=${DEBUG}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - APP_PORT=3013
+      - LOCATION=AMS
+      - MONITORING_SERVICES=${MONITORING_SERVICES}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.monitoring_2.rule=HostRegexp(`{subdomain:amsterdam}.localhost`)
+      - traefik.http.routers.monitoring_2.priority=2
+      - traefik.http.services.monitoring_2.loadbalancer.server.port=3013
