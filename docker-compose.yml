@@ -14,13 +14,13 @@ services:
   # internal redis service for bullmq
   redis:
     container_name: redis
-    image: 'redis'
+    image: "redis"
     restart: always
     hostname: redis
     expose:
       - 6379
     ports:
-      - '6379:6379'
+      - "6379:6379"
     networks:
       - backend
     volumes:
@@ -44,7 +44,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - proxy
-  
+
   marketing:
     container_name: marketing
     image: "vorillaz/marketing-iot-example"
@@ -126,10 +126,10 @@ services:
       - traefik.http.routers.worker.rule=HostRegexp(`{subdomain:worker}.localhost`)
       - traefik.http.routers.worker.priority=2
       - traefik.http.services.worker.loadbalancer.server.port=3300
-  
+
   # Monitoring demo
-  monitoring_1:
-    container_name: monitoring_1
+  monitoring:
+    container_name: monitoring
     build: ./monitoring
     restart: always
     depends_on:
@@ -149,32 +149,6 @@ services:
       - MONITORING_SERVICES=${MONITORING_SERVICES}
     labels:
       - traefik.enable=true
-      - traefik.http.routers.monitoring_1.rule=HostRegexp(`{subdomain:frankfurt}.localhost`)
-      - traefik.http.routers.monitoring_1.priority=2
-      - traefik.http.services.monitoring_1.loadbalancer.server.port=3012
-
-  # Monitoring demo another location
-  monitoring_2:
-    container_name: monitoring_2
-    build: ./monitoring
-    restart: always
-    depends_on:
-      - redis
-    links:
-      - redis
-    networks:
-      - backend
-      - proxy
-    environment:
-      - DEBUG=${DEBUG}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_URL=${REDIS_URL}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - APP_PORT=3013
-      - LOCATION=AMS
-      - MONITORING_SERVICES=${MONITORING_SERVICES}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.monitoring_2.rule=HostRegexp(`{subdomain:amsterdam}.localhost`)
-      - traefik.http.routers.monitoring_2.priority=2
-      - traefik.http.services.monitoring_2.loadbalancer.server.port=3013
+      - traefik.http.routers.monitoring.rule=HostRegexp(`{subdomain:monitoring}.localhost`)
+      - traefik.http.routers.monitoring.priority=2
+      - traefik.http.services.monitoring.loadbalancer.server.port=3012

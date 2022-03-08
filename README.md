@@ -6,7 +6,7 @@ This is a sample infrastructure demo of the IoT application, Docker compose has 
 
 ## Requirements
 
-The app should get deployed using **DigitalOcean,Linode and/or Hetzner servers in the EU** (Germany, Netherlands, France etc). We also need to spin up multiple monitoring services across different regions (USA, Japan, Finland etc). The main application is used a web interface while the monitoring services are constantly "hitting" the IoT devices in order to detect failures or anomalies.
+The app should get deployed using **Hetzner servers in the EU** (Germany, Finland etc). We also need to spin up multiple monitoring services across different regions (USA, Japan, Finland etc). The main application is used a web interface while the monitoring services are constantly "hitting" the IoT devices in order to detect failures or anomalies.
 Since we need to scale the app on demand we are using cloudflare as a load balancer, upon spinning up a new service the Load balancer gets notified for the changes. All the databases (Postgres, Redis are handled by an external provider).
 
 ![Sample application](/assets/app.svg).
@@ -57,12 +57,14 @@ docker-compose up --build
 
 Visit the marketing app in `http://localhost:80`
 Visit the docs in `http://docs.localhost:80`
+Visit the collection api `http://collect.localhost/health`
+Visit the dynamic subdomain app `http://any-subdomain.localhost` or `http://mysubdomain.localhost` and so on.
 
 ## Goals
 
-- [ ] Create a simple way to provision a simple server on DigitalOcean, Linode and Hetzner maybe using Terraform
-- [ ] Add a simple CI/CD pipeline to the with listeners for each repository, the main application is built as a monorepo with small individual packages which are built on demand and pushed to the main repo. The idea is to listen for changes across the 3 repos and deploy the changes to the application servers.
-- [ ] Deploy the main application as well as the load balancer from the main repo to the production servers.
-- [ ] Deploy each monitoring service to the appropriate location servers (FRA, AMS, etc)
-- [ ] Add a simple monitoring service to the infrastructure, the monitoring service is responsible for the actual service discovery and monitoring of the application, prometeheus would be ideal.
-- [ ] Don't bother for DBs and Redis, we will use an external provider for that.
+- [ ] The deliverable should recreate the Docker compose app.
+- [ ] Create a simple way to provision a simple server Hetzner using Terraform and installing Nomad and Consul, the Terraform should create a new Hetzner server and provision the Nomad and Consul services.
+- [ ] Deploy the main application using Traefik as a load balancer.
+- [ ] All the apps should be provisioned using environmental variables.
+- [ ] You don't have to bother for load balancers, you we use Clouflare as a load balancer.
+- [ ] Don't bother for DBs and Redis, we will use an external provider for that, for demo purposes you can use Supabase and the free plan from Redis Labs.

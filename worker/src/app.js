@@ -31,6 +31,7 @@ const app = async () => {
   await fastify.register(require("./redis"));
   await fastify.register(require("./bull"));
   await fastify.register(require("./schedule"));
+  await fastify.register(require("./api"));
 
   fastify.setNotFoundHandler((request, reply) => {
     fastify.log.debug(`Route not found: ${request.method}:${request.raw.url}`);
